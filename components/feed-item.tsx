@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Heart, MessageCircle, Share2, BookOpen, Quote, Briefcase, TrendingUp, ExternalLink } from 'lucide-react'
+import { Heart, MessageCircle, Share2, BookOpen, Quote, Briefcase, TrendingUp, ExternalLink, Music } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type FeedType = 'article' | 'testimonial' | 'project'
@@ -22,6 +22,7 @@ interface FeedItemProps {
   projectTech?: string[]
   projectLink?: string
   image?: string
+  media?: string[]
   clientImage?: string
   linkedProjectId?: string
 }
@@ -30,6 +31,109 @@ const TYPE_META: Record<FeedType, { label: string; icon: React.ElementType; colo
   article: { label: 'Article', icon: BookOpen, color: '#f4a295' },
   testimonial: { label: 'Testimonial', icon: Quote, color: '#a8d5c2' },
   project: { label: 'Project', icon: Briefcase, color: '#9db8e8' },
+}
+
+function getMediaType(url: string): 'image' | 'video' | 'audio' {
+  if (/\.(mp4|webm|mov)$/i.test(url)) return 'video'
+  if (/\.(mp3|ogg|wav|aac|flac|m4a)$/i.test(url)) return 'audio'
+  return 'image'
+}
+
+/** Twitter/X-style media grid — 1 full, 2 side-by-side, 3 left + right stack, 4 2×2 */
+function MediaGrid({ urls, onClick }: { urls: string[]; onClick?: (e: React.MouseEvent) => void }) {
+  const count = urls.length
+  if (count === 0) return null
+
+  const renderItem = (url: string, index: number, className?: string) => {
+    const kind = getMediaType(url)
+
+    if (kind === 'video') {
+      return (
+        <div key={index} className={cn('relative overflow-hidden bg-black rounded-xl', className)}>
+          <video
+            src={url}
+            controls
+            className="w-full h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )
+    }
+
+    if (kind === 'audio') {
+      return (
+        <div
+          key={index}
+          className={cn('flex flex-col items-center justify-center gap-2.5 rounded-xl bg-muted border border-border p-4', className)}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            className="w-10 h-10 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: '#f4a29520' }}
+          >
+            <Music size={18} style={{ color: '#f4a295' }} />
+          </div>
+          <audio
+            src={url}
+            controls
+            className="w-full max-w-full h-8"
+            style={{ accentColor: '#f4a295' }}
+          />
+        </div>
+      )
+    }
+
+    // image
+    return (
+      <div key={index} className={cn('overflow-hidden bg-muted rounded-xl', className)}>
+        <img
+          src={url}
+          alt=""
+          className="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-300"
+          loading="lazy"
+        />
+      </div>
+    )
+  }
+
+  if (count === 1) {
+    const kind = getMediaType(urls[0])
+    const isAudio = kind === 'audio'
+    return (
+      <div
+        className={cn('w-full rounded-xl overflow-hidden', !isAudio && 'bg-muted')}
+        style={isAudio ? {} : { aspectRatio: '16/9' }}
+        onClick={onClick}
+      >
+        {renderItem(urls[0], 0, 'w-full h-full')}
+      </div>
+    )
+  }
+
+  if (count === 2) {
+    return (
+      <div className="grid grid-cols-2 gap-1 rounded-xl overflow-hidden" style={{ aspectRatio: '16/9' }} onClick={onClick}>
+        {urls.map((url, i) => renderItem(url, i, 'w-full h-full'))}
+      </div>
+    )
+  }
+
+  if (count === 3) {
+    return (
+      <div className="grid grid-cols-2 gap-1 rounded-xl overflow-hidden" style={{ aspectRatio: '4/3' }} onClick={onClick}>
+        <div className="row-span-2">{renderItem(urls[0], 0, 'w-full h-full')}</div>
+        {renderItem(urls[1], 1, 'w-full h-full')}
+        {renderItem(urls[2], 2, 'w-full h-full')}
+      </div>
+    )
+  }
+
+  // 4 — 2×2
+  return (
+    <div className="grid grid-cols-2 gap-1 rounded-xl overflow-hidden" style={{ aspectRatio: '1/1' }} onClick={onClick}>
+      {urls.slice(0, 4).map((url, i) => renderItem(url, i, 'w-full h-full'))}
+    </div>
+  )
 }
 
 export function FeedItem({
@@ -47,6 +151,7 @@ export function FeedItem({
   projectTech = [],
   projectLink,
   image,
+  media,
   clientImage,
   linkedProjectId,
 }: FeedItemProps) {
@@ -55,6 +160,12 @@ export function FeedItem({
   const meta = TYPE_META[type]
   const TypeIcon = meta.icon
   const detailHref = id ? `/feed/${id}` : undefined
+
+  // Merge legacy image + media array, dedup
+  const allMedia: string[] = (() => {
+    const arr = media && media.length > 0 ? media : image ? [image] : []
+    return Array.from(new Set(arr.filter(Boolean)))
+  })()
 
   function handleLike(e: React.MouseEvent) {
     e.preventDefault()
@@ -118,19 +229,10 @@ export function FeedItem({
         {/* Body */}
         <p className="text-sm text-muted-foreground leading-relaxed mb-3 line-clamp-3">{body}</p>
 
-        {/* Media */}
-        {image && (
-          <div className="mb-3 rounded-xl overflow-hidden bg-muted" style={{ aspectRatio: '16/9' }}>
-            {image.match(/\.(mp4|webm)$/i) ? (
-              <video src={image} controls className="w-full h-full object-cover" onClick={(e) => e.preventDefault()} />
-            ) : (
-              <img src={image} alt={title || 'Post image'} className="w-full h-full object-cover" />
-            )}
-          </div>
-        )}
-        {type === 'testimonial' && clientImage && (
-          <div className="mb-3 rounded-xl overflow-hidden bg-muted" style={{ aspectRatio: '16/9' }}>
-            <img src={clientImage} alt={author || 'Client'} className="w-full h-full object-cover" />
+        {/* Media grid */}
+        {allMedia.length > 0 && (
+          <div className="mb-3">
+            <MediaGrid urls={allMedia} onClick={(e) => e.preventDefault()} />
           </div>
         )}
 
