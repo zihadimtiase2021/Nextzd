@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { NavSidebar } from '@/components/nav-sidebar'
 import { MobileNav } from '@/components/mobile-nav'
 import { MobileTopbar } from '@/components/mobile-topbar'
 import { FeedManager } from '@/components/admin/feed-manager'
 import { PortfolioManager } from '@/components/admin/portfolio-manager'
 import { SiteSettingsManager } from '@/components/admin/site-settings-manager'
-import { Database, Rss, Briefcase, Settings2, ChevronRight } from 'lucide-react'
+import { Database, Rss, Briefcase, Settings2, ChevronRight, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const SECTIONS = [
@@ -37,9 +38,20 @@ const SECTIONS = [
 type SectionId = typeof SECTIONS[number]['id']
 
 export default function DataManagementPage() {
+  const router = useRouter()
   const [active, setActive] = useState<SectionId>('feed')
+  const [loggingOut, setLoggingOut] = useState(false)
 
   const current = SECTIONS.find((s) => s.id === active)!
+
+  async function handleLogout() {
+    setLoggingOut(true)
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+    } finally {
+      router.replace('/admin/login')
+    }
+  }
 
   return (
     <div className="flex min-h-screen max-w-[1280px] mx-auto">
@@ -56,10 +68,19 @@ export default function DataManagementPage() {
           >
             <Database size={18} style={{ color: '#f4a295' }} />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <h1 className="font-bold text-base text-foreground leading-tight">Data Management</h1>
             <p className="text-xs text-muted-foreground">Manage all portfolio content &amp; site settings</p>
           </div>
+          <button
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-all disabled:opacity-50 shrink-0"
+            title="Log out of admin"
+          >
+            <LogOut size={15} />
+            <span className="hidden sm:inline">{loggingOut ? 'Logging out...' : 'Log out'}</span>
+          </button>
         </div>
 
         {/* ── Body: nav sidebar + content ────────────────────────── */}

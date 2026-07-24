@@ -14,18 +14,30 @@ import {
 } from 'lucide-react'
 import { useTheme } from '@/components/theme-provider'
 import { cn } from '@/lib/utils'
+import { useEffect, useState } from 'react'
 
-const NAV_ITEMS = [
+const PUBLIC_NAV = [
   { label: 'Home', href: '/', icon: Home },
   { label: 'About', href: '/about', icon: User },
   { label: 'Portfolio', href: '/portfolio', icon: Briefcase },
   { label: 'Contact', href: '/contact', icon: Mail },
-  { label: 'Data Management', href: '/data-management', icon: Database },
 ]
 
 export function NavSidebar() {
   const pathname = usePathname()
   const { theme, toggle } = useTheme()
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((d) => setIsAdmin(d.authenticated === true))
+      .catch(() => setIsAdmin(false))
+  }, [pathname])
+
+  const navItems = isAdmin
+    ? [...PUBLIC_NAV, { label: 'Data Management', href: '/data-management', icon: Database }]
+    : PUBLIC_NAV
 
   return (
     <>
@@ -44,7 +56,7 @@ export function NavSidebar() {
 
           {/* Nav links */}
           <nav className="flex flex-col gap-1">
-            {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
+            {navItems.map(({ label, href, icon: Icon }) => {
               const active =
                 href === '/' ? pathname === '/' : pathname.startsWith(href)
               return (
@@ -75,7 +87,7 @@ export function NavSidebar() {
           <div className="mt-6">
             <Link
               href="/contact"
-              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-brand text-white text-sm font-semibold hover:bg-brand-deep transition-colors"
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity"
               style={{ backgroundColor: '#f4a295', color: '#1a1a1a' }}
             >
               <MessageCircle size={16} />
