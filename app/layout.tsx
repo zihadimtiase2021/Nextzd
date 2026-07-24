@@ -62,17 +62,16 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        {/* Synchronous theme script — runs before paint to avoid flash */}
+      <body
+        className={`${inter.variable} ${jetbrainsMono.variable} antialiased bg-background text-foreground`}
+      >
+        {/* Synchronous theme script — runs before paint to prevent flash of wrong theme */}
         <script
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem('zd-theme');document.documentElement.classList.toggle('dark',t?t==='dark':true)}catch(e){}})()`,
           }}
         />
-      </head>
-      <body
-        className={`${inter.variable} ${jetbrainsMono.variable} antialiased bg-background text-foreground`}
-      >
         <ThemeProvider>{children}</ThemeProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

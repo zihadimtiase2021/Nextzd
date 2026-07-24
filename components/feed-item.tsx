@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Heart, MessageCircle, Share2, BookOpen, Quote, Briefcase, TrendingUp, ExternalLink, Music } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -155,6 +156,7 @@ export function FeedItem({
   clientImage,
   linkedProjectId,
 }: FeedItemProps) {
+  const router = useRouter()
   const [liked, setLiked] = useState(false)
   const [likes, setLikes] = useState(initialLikes)
   const meta = TYPE_META[type]
@@ -318,15 +320,18 @@ export function FeedItem({
   )
 
   return (
-    <article className={cn(
-      'px-4 py-5 border-b border-border transition-colors',
-      detailHref ? 'cursor-pointer hover:bg-muted/30' : ''
-    )}>
-      {detailHref ? (
-        <Link href={detailHref} className="block" tabIndex={-1} aria-label={`Read full post: ${title}`}>
-          {inner}
-        </Link>
-      ) : inner}
+    <article
+      className={cn(
+        'px-4 py-5 border-b border-border transition-colors',
+        detailHref ? 'cursor-pointer hover:bg-muted/30' : ''
+      )}
+      onClick={detailHref ? () => router.push(detailHref) : undefined}
+      role={detailHref ? 'button' : undefined}
+      tabIndex={detailHref ? 0 : undefined}
+      onKeyDown={detailHref ? (e) => { if (e.key === 'Enter') router.push(detailHref) } : undefined}
+      aria-label={detailHref && title ? `Read full post: ${title}` : undefined}
+    >
+      {inner}
     </article>
   )
 }
