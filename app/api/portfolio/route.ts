@@ -1,0 +1,55 @@
+import { NextRequest, NextResponse } from 'next/server'
+import {
+  getPortfolioData,
+  addPortfolioProject,
+  updatePortfolioProject,
+  deletePortfolioProject,
+} from '@/lib/data-actions'
+
+export async function GET(request: NextRequest) {
+  try {
+    const data = await getPortfolioData()
+    return NextResponse.json(data)
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to fetch portfolio' }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const result = await addPortfolioProject(body)
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: 400 })
+    }
+    return NextResponse.json(result, { status: 201 })
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to add portfolio project' }, { status: 500 })
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const { id, updates } = await request.json()
+    const result = await updatePortfolioProject(id, updates)
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: 400 })
+    }
+    return NextResponse.json(result)
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to update portfolio project' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { id } = await request.json()
+    const result = await deletePortfolioProject(id)
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: 400 })
+    }
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to delete portfolio project' }, { status: 500 })
+  }
+}

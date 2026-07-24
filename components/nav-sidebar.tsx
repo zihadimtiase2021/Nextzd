@@ -1,0 +1,115 @@
+'use client'
+
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import {
+  Home,
+  User,
+  Briefcase,
+  Mail,
+  Sun,
+  Moon,
+  MessageCircle,
+  Database,
+} from 'lucide-react'
+import { useTheme } from '@/components/theme-provider'
+import { cn } from '@/lib/utils'
+
+const NAV_ITEMS = [
+  { label: 'Home', href: '/', icon: Home },
+  { label: 'About', href: '/about', icon: User },
+  { label: 'Portfolio', href: '/portfolio', icon: Briefcase },
+  { label: 'Contact', href: '/contact', icon: Mail },
+  { label: 'Data Management', href: '/data-management', icon: Database },
+]
+
+export function NavSidebar() {
+  const pathname = usePathname()
+  const { theme, toggle } = useTheme()
+
+  return (
+    <>
+      {/* ── Desktop left sidebar ──────────────────────────── */}
+      <aside className="hidden md:flex flex-col justify-between w-64 min-h-screen sticky top-0 border-r border-border px-4 py-6 shrink-0">
+        {/* Logo */}
+        <div>
+          <Link href="/" className="flex items-center gap-2 mb-8 group">
+            <div className="w-9 h-9 rounded-xl bg-brand flex items-center justify-center shrink-0">
+              <span className="font-mono font-bold text-sm text-white">ZI</span>
+            </div>
+            <span className="font-bold text-lg tracking-tight text-foreground group-hover:text-brand transition-colors">
+              Zihad Imtiase
+            </span>
+          </Link>
+
+          {/* Nav links */}
+          <nav className="flex flex-col gap-1">
+            {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
+              const active =
+                href === '/' ? pathname === '/' : pathname.startsWith(href)
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
+                    active
+                      ? 'bg-brand/10 text-brand'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  )}
+                >
+                  <Icon
+                    size={18}
+                    className={cn(active ? 'text-brand' : 'text-current')}
+                  />
+                  {label}
+                  {active && (
+                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-brand" />
+                  )}
+                </Link>
+              )
+            })}
+          </nav>
+
+          {/* CTA */}
+          <div className="mt-6">
+            <Link
+              href="/contact"
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-brand text-white text-sm font-semibold hover:bg-brand-deep transition-colors"
+              style={{ backgroundColor: '#f4a295', color: '#1a1a1a' }}
+            >
+              <MessageCircle size={16} />
+              Hire Me
+            </Link>
+          </div>
+        </div>
+
+        {/* Bottom: theme toggle + small profile */}
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={toggle}
+            aria-label="Toggle theme"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-all w-full"
+          >
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          </button>
+
+          <div className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-muted transition-all cursor-default">
+            <div className="w-8 h-8 rounded-full bg-brand/20 border-2 border-brand flex items-center justify-center shrink-0">
+              <span className="text-xs font-bold text-brand">ZI</span>
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground truncate">
+                Zihad Imtiase
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                @zihadimtiase
+              </p>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </>
+  )
+}
