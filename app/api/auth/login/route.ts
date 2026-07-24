@@ -62,8 +62,18 @@ export async function POST(request: NextRequest) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      // 7 days
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    })
+
+    // Non-HttpOnly hint cookie so the client nav can read it synchronously
+    // without a network round-trip. Security still relies solely on the
+    // HttpOnly session cookie above — this is just a UI signal.
+    cookieStore.set('admin_hint', '1', {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7, // same lifetime as session
     })
 
     return NextResponse.json({ success: true })

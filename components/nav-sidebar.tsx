@@ -23,17 +23,25 @@ const PUBLIC_NAV = [
   { label: 'Contact', href: '/contact', icon: Mail },
 ]
 
+function readAdminHint(): boolean {
+  if (typeof document === 'undefined') return false
+  return document.cookie.split(';').some((c) => c.trim().startsWith('admin_hint=1'))
+}
+
 export function NavSidebar() {
   const pathname = usePathname()
   const { theme, toggle } = useTheme()
-  const [isAdmin, setIsAdmin] = useState(false)
+  // Initialise synchronously from the hint cookie — no flash on navigation
+  const [isAdmin, setIsAdmin] = useState<boolean>(() => readAdminHint())
 
   useEffect(() => {
+    // One-time integrity check against the real session on mount only
     fetch('/api/auth/me')
       .then((r) => r.json())
       .then((d) => setIsAdmin(d.authenticated === true))
-      .catch(() => setIsAdmin(false))
-  }, [pathname])
+      .catch(() => setIsAdmin(readAdminHint()))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // intentionally no pathname dep — hint cookie handles route changes
 
   const navItems = isAdmin
     ? [...PUBLIC_NAV, { label: 'Admin', href: '/admin', icon: Database }]
