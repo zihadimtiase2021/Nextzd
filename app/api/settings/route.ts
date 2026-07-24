@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs/promises'
 import path from 'path'
+import { isAuthenticated } from '@/lib/auth'
 
 const SETTINGS_FILE = path.join(process.cwd(), 'data', 'settings.json')
 
@@ -27,7 +28,10 @@ export async function GET() {
   }
 }
 
-export async function PUT(req: Request) {
+export async function PUT(req: NextRequest) {
+  if (!(await isAuthenticated(req))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   try {
     const updates = await req.json()
     const current = await readSettings()

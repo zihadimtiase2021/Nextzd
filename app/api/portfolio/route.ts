@@ -5,6 +5,7 @@ import {
   updatePortfolioProject,
   deletePortfolioProject,
 } from '@/lib/data-actions'
+import { isAuthenticated } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,6 +17,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  if (!(await isAuthenticated(request))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   try {
     const body = await request.json()
     const result = await addPortfolioProject(body)
@@ -29,6 +33,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  if (!(await isAuthenticated(request))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   try {
     const { id, updates } = await request.json()
     const result = await updatePortfolioProject(id, updates)
@@ -42,6 +49,9 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  if (!(await isAuthenticated(request))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   try {
     const { id } = await request.json()
     const result = await deletePortfolioProject(id)

@@ -1,15 +1,6 @@
 import { PageShell } from '@/components/page-shell'
 import { MapPin, Calendar, GraduationCap, Zap, Code2, Globe, Camera } from 'lucide-react'
-
-async function getSettings() {
-  try {
-    const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
-    const res = await fetch(`${base}/api/settings`, { cache: 'no-store' })
-    return await res.json()
-  } catch {
-    return { hero: {}, about: { media: [] } }
-  }
-}
+import { readSettingsData } from '@/lib/data'
 
 const TIMELINE = [
   {
@@ -73,7 +64,7 @@ const VALUES = [
 ]
 
 export default async function AboutPage() {
-  const siteSettings = await getSettings()
+  const siteSettings = await readSettingsData()
   const aboutMedia: string[] = Array.isArray(siteSettings?.about?.media)
     ? siteSettings.about.media
     : []

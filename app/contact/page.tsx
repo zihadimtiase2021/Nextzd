@@ -1,21 +1,21 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { PageShell } from '@/components/page-shell'
-import { Mail, MapPin, MessageSquare, Send, CheckCircle } from 'lucide-react'
+import { Mail, MapPin, MessageSquare, Send, CheckCircle, AlertCircle } from 'lucide-react'
 
 const CONTACT_OPTIONS = [
   {
     icon: MessageSquare,
     label: 'WhatsApp',
-    value: '+880 — Available on request',
-    href: 'https://wa.me/8801XXXXXXXXX',
+    value: '+880 1XXX-XXXXXX',
+    href: 'https://wa.me/880',
   },
   {
     icon: Mail,
     label: 'Email',
-    value: 'zihad@example.com',
-    href: 'mailto:zihad@example.com',
+    value: 'zihadimtiase@gmail.com',
+    href: 'mailto:zihadimtiase@gmail.com',
   },
   {
     icon: MapPin,
@@ -34,16 +34,45 @@ const SERVICES = [
   'Other',
 ]
 
-type FormState = 'idle' | 'sending' | 'sent'
+type FormState = 'idle' | 'sending' | 'sent' | 'error'
 
 export default function ContactPage() {
   const [formState, setFormState] = useState<FormState>('idle')
+  const [errorMsg, setErrorMsg] = useState('')
   const [service, setService] = useState('')
+  const formRef = useRef<HTMLFormElement>(null)
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setFormState('sending')
-    setTimeout(() => setFormState('sent'), 1400)
+    setErrorMsg('')
+
+    const form = e.currentTarget
+    const data = {
+      name: (form.elements.namedItem('name') as HTMLInputElement).value,
+      email: (form.elements.namedItem('email') as HTMLInputElement).value,
+      service,
+      budget: (form.elements.namedItem('budget') as HTMLSelectElement).value,
+      message: (form.elements.namedItem('message') as HTMLTextAreaElement).value,
+    }
+
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        setErrorMsg(json.error ?? 'Something went wrong. Please try again.')
+        setFormState('error')
+      } else {
+        setFormState('sent')
+      }
+    } catch {
+      setErrorMsg('Network error. Please check your connection and try again.')
+      setFormState('error')
+    }
   }
 
   return (
@@ -111,7 +140,7 @@ export default function ContactPage() {
               Thanks for reaching out. I will reply within 24 hours.
             </p>
             <button
-              onClick={() => setFormState('idle')}
+              onClick={() => { setFormState('idle'); setErrorMsg('') }}
               className="mt-2 text-sm font-semibold transition-colors"
               style={{ color: '#f4a295' }}
             >
@@ -217,9 +246,17 @@ export default function ContactPage() {
               />
             </div>
 
+            {formState === 'error' && (
+              <div className="flex items-start gap-2.5 rounded-xl border border-red-500/30 bg-red-500/10 p-3">
+                <AlertCircle size={15} className="text-red-400 shrink-0 mt-0.5" />
+                <p className="text-xs text-red-400 leading-relaxed">{errorMsg}</p>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={formState === 'sending'}
+              onClick={() => formState === 'error' && setFormState('idle')}
               className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-semibold text-sm transition-all disabled:opacity-60"
               style={{ backgroundColor: '#f4a295', color: '#1a1a1a' }}
             >

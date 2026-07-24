@@ -3,6 +3,35 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import type { Metadata } from 'next'
+import { readFeedData } from '@/lib/data'
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}): Promise<Metadata> {
+  const { id } = await params
+  const data = await readFeedData()
+  const item = data.items.find((i) => i.id === id)
+  if (!item) return { title: 'Post not found' }
+  const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://zihadimtiase.com'
+  return {
+    title: item.title,
+    description: item.excerpt,
+    openGraph: {
+      title: item.title,
+      description: item.excerpt,
+      url: `${base}/feed/${id}`,
+      ...(item.image ? { images: [{ url: item.image }] } : {}),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: item.title,
+      description: item.excerpt,
+    },
+  }
+}
 import {
   ArrowLeft, Heart, MessageCircle, Share2,
   BookOpen, Quote, Briefcase, ExternalLink, TrendingUp, Music,
