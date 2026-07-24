@@ -36,7 +36,7 @@ export function NavSidebar() {
   }, [pathname])
 
   const navItems = isAdmin
-    ? [...PUBLIC_NAV, { label: 'Data Management', href: '/data-management', icon: Database }]
+    ? [...PUBLIC_NAV, { label: 'Admin', href: '/admin', icon: Database }]
     : PUBLIC_NAV
 
   return (
@@ -58,7 +58,11 @@ export function NavSidebar() {
           <nav className="flex flex-col gap-1">
             {navItems.map(({ label, href, icon: Icon }) => {
               const active =
-                href === '/' ? pathname === '/' : pathname.startsWith(href)
+                href === '/'
+                  ? pathname === '/'
+                  : href === '/admin'
+                  ? pathname.startsWith('/admin')
+                  : pathname.startsWith(href)
               return (
                 <Link
                   key={href}

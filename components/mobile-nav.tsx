@@ -25,7 +25,7 @@ export function MobileNav() {
   }, [pathname])
 
   const navItems = isAdmin
-    ? [...PUBLIC_NAV, { label: 'Manage', href: '/data-management', icon: Database }]
+    ? [...PUBLIC_NAV, { label: 'Admin', href: '/admin', icon: Database }]
     : PUBLIC_NAV
 
   return (
@@ -33,7 +33,11 @@ export function MobileNav() {
       <div className="flex items-center justify-around px-2 py-2">
         {navItems.map(({ label, href, icon: Icon }) => {
           const active =
-            href === '/' ? pathname === '/' : pathname.startsWith(href)
+            href === '/'
+              ? pathname === '/'
+              : href === '/admin'
+              ? pathname.startsWith('/admin')
+              : pathname.startsWith(href)
           return (
             <Link
               key={href}

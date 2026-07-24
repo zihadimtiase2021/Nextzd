@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const SESSION_COOKIE = 'admin_session'
-const PROTECTED = '/data-management'
-const LOGIN_PAGE = '/admin/login'
+const LOGIN_PAGE = '/login'
 
 async function sha256(text: string): Promise<string> {
   const msgBuffer = new TextEncoder().encode(text)
@@ -18,8 +17,8 @@ async function makeSessionToken(username: string, password: string): Promise<str
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Only protect /data-management and its sub-paths
-  if (!pathname.startsWith(PROTECTED)) {
+  // Only protect /admin and its sub-paths
+  if (!pathname.startsWith('/admin')) {
     return NextResponse.next()
   }
 
@@ -35,7 +34,6 @@ export async function middleware(request: NextRequest) {
   const envPassword = process.env.ADMIN_PASSWORD ?? ''
 
   if (!envUsername || !envPassword) {
-    // Credentials not configured — let through to show an error inside the page
     return NextResponse.next()
   }
 
@@ -55,5 +53,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/data-management', '/data-management/:path*'],
+  matcher: ['/admin', '/admin/:path*'],
 }
