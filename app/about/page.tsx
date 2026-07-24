@@ -1,5 +1,7 @@
 import { PageShell } from '@/components/page-shell'
-import { MapPin, Calendar, GraduationCap, Zap, Code2, Globe } from 'lucide-react'
+import { MapPin, Calendar, GraduationCap, Zap, Code2, Globe, Camera } from 'lucide-react'
+
+const PROFILE_IMAGE = '/images/profile.jpg' // Replace with your own image path
 
 const TIMELINE = [
   {
@@ -62,7 +64,20 @@ const VALUES = [
   },
 ]
 
-export default function AboutPage() {
+async function imageExists(src: string): Promise<boolean> {
+  try {
+    const res = await fetch(src, { method: 'HEAD' })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
+export default async function AboutPage() {
+  const hasProfileImage = await imageExists(
+    `${process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'}${PROFILE_IMAGE}`
+  ).catch(() => false)
+
   return (
     <PageShell>
       {/* Page header */}
@@ -71,32 +86,84 @@ export default function AboutPage() {
         <p className="text-xs text-muted-foreground">Zihad Imtiase</p>
       </div>
 
-      {/* Hero banner */}
-      <div
-        className="h-24 w-full"
-        style={{
-          background:
-            'linear-gradient(135deg, #f4a29520 0%, #e8806f15 60%, #f4a29505 100%)',
-        }}
-      />
-
-      {/* Intro section */}
-      <div className="px-5 py-6 border-b border-border">
-        <div className="flex items-center gap-3 mb-5">
+      {/* --- Photo / Banner section --- */}
+      <div className="relative">
+        {/* Cover banner */}
+        <div
+          className="h-32 w-full"
+          style={{
+            background:
+              'linear-gradient(135deg, #f4a29522 0%, #e8806f18 60%, #f4a29508 100%)',
+          }}
+        >
+          {/* subtle dot grid */}
           <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-lg shrink-0"
-            style={{ backgroundColor: '#f4a295', color: '#1a1a1a' }}
-          >
-            ZI
-          </div>
-          <div>
-            <h2 className="font-bold text-xl text-foreground">Zihad Imtiase</h2>
-            <p className="text-sm text-muted-foreground">
-              Frontend Developer &amp; Webflow Specialist
-            </p>
+            className="absolute inset-0 opacity-[0.06]"
+            style={{
+              backgroundImage: 'radial-gradient(circle, #f4a295 1.5px, transparent 1.5px)',
+              backgroundSize: '24px 24px',
+            }}
+          />
+        </div>
+
+        {/* Profile image — centered, overlapping the banner */}
+        <div className="flex justify-center">
+          <div className="relative -mt-12 z-10">
+            {hasProfileImage ? (
+              <div
+                className="w-24 h-24 rounded-2xl overflow-hidden border-4 border-background shadow-xl"
+                style={{ boxShadow: '0 0 0 1px #f4a29530, 0 8px 32px #0008' }}
+              >
+                <img
+                  src={PROFILE_IMAGE}
+                  alt="Zihad Imtiase"
+                  className="w-full h-full object-cover object-center"
+                />
+              </div>
+            ) : (
+              /* Placeholder — shows when no image is uploaded yet */
+              <div
+                className="w-24 h-24 rounded-2xl border-4 border-background flex flex-col items-center justify-center gap-1 shadow-xl"
+                style={{
+                  backgroundColor: '#f4a29518',
+                  border: '2px dashed #f4a29560',
+                  boxShadow: '0 8px 32px #0008',
+                }}
+                title="Upload your photo to /public/images/profile.jpg"
+              >
+                <Camera size={22} style={{ color: '#f4a295' }} />
+                <span className="text-[9px] font-medium text-center leading-tight px-1" style={{ color: '#f4a295' }}>
+                  Add photo
+                </span>
+              </div>
+            )}
+            {/* Online indicator */}
+            <span
+              className="absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-background"
+            />
           </div>
         </div>
 
+        {/* Name + title below avatar */}
+        <div className="text-center px-5 pt-3 pb-5 border-b border-border">
+          <h2 className="font-bold text-xl text-foreground">Zihad Imtiase</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Frontend Developer &amp; Webflow Specialist
+          </p>
+          {/* Upload hint — only shown when no image */}
+          {!hasProfileImage && (
+            <p className="mt-2 text-[11px] text-muted-foreground/60 leading-relaxed">
+              Upload your photo to{' '}
+              <code className="font-mono text-[10px] px-1 py-0.5 rounded bg-muted">
+                /public/images/profile.jpg
+              </code>
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Intro section */}
+      <div className="px-5 py-6 border-b border-border">
         <p className="text-sm text-foreground leading-relaxed mb-4">
           I help startups, agencies, and growing businesses turn their ideas into
           high-performing websites. My focus is always the same: websites that look
@@ -132,7 +199,7 @@ export default function AboutPage() {
           {VALUES.map((v) => (
             <div
               key={v.title}
-              className="p-4 rounded-2xl border border-border bg-card hover:border-brand/40 transition-colors"
+              className="p-4 rounded-2xl border border-border bg-card hover:border-[#f4a295]/40 transition-colors"
             >
               <p className="font-semibold text-sm text-foreground mb-1">{v.title}</p>
               <p className="text-xs text-muted-foreground leading-relaxed">{v.desc}</p>

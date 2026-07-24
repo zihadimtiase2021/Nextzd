@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { PageShell } from '@/components/page-shell'
 import { ExternalLink, Code, TrendingUp } from 'lucide-react'
@@ -19,47 +19,48 @@ interface Project {
   image?: string
 }
 
-export default function PortfolioPage() {
+function PortfolioPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [projects, setProjects] = useState<Project[]>([])
-  const [filteredProjects, setFilteredProjects] = useState<Project[]>([])
-  const [activeFilter, setActiveFilter] = useState('all')
   const [loading, setLoading] = useState(true)
   const [categories, setCategories] = useState<string[]>([])
 
+  // Read active filter from URL search param ?cat=, fallback to 'all'
+  const activeFilter = searchParams.get('cat') ?? 'all'
+
+  const filteredProjects =
+    activeFilter === 'all' ? projects : projects.filter((p) => p.category === activeFilter)
+
   useEffect(() => {
+    async function fetchProjects() {
+      try {
+        const res = await fetch('/api/portfolio')
+        const data = await res.json()
+        setProjects(data.projects || [])
+        const uniqueCategories = [
+          ...new Set((data.projects || []).map((p: Project) => p.category)),
+        ] as string[]
+        setCategories(['all', ...uniqueCategories])
+      } catch {
+        // silently fail
+      } finally {
+        setLoading(false)
+      }
+    }
     fetchProjects()
   }, [])
 
-  useEffect(() => {
-    if (activeFilter === 'all') {
-      setFilteredProjects(projects)
-    } else {
-      setFilteredProjects(projects.filter((p) => p.category === activeFilter))
-    }
-  }, [activeFilter, projects])
-
-  async function fetchProjects() {
-    try {
-      const res = await fetch('/api/portfolio')
-      const data = await res.json()
-      setProjects(data.projects || [])
-      const uniqueCategories = [...new Set((data.projects || []).map((p: Project) => p.category))] as string[]
-      setCategories(['all', ...uniqueCategories])
-    } catch {
-      // silently fail
-    } finally {
-      setLoading(false)
-    }
-  }
-
   function handleFilterChange(cat: string) {
-    setActiveFilter(cat)
+    // Update URL search param without navigating away — purely visual filtering
+    const params = new URLSearchParams(searchParams.toString())
     if (cat === 'all') {
-      router.push('/portfolio', { scroll: false })
+      params.delete('cat')
     } else {
-      router.push(`/portfolio/category/${cat}`, { scroll: false })
+      params.set('cat', cat)
     }
+    const newUrl = params.size > 0 ? `/portfolio?${params.toString()}` : '/portfolio'
+    router.replace(newUrl, { scroll: false })
   }
 
   return (
@@ -156,7 +157,7 @@ export default function PortfolioPage() {
                   ))}
                 </div>
 
-                {/* Quick action links — prevent detail page nav */}
+                {/* Quick action links */}
                 <div className="flex items-center gap-2 pt-2 border-t border-border">
                   <span className="text-xs font-semibold flex-1" style={{ color: '#f4a295' }}>
                     View full project →
@@ -192,5 +193,13 @@ export default function PortfolioPage() {
         )}
       </div>
     </PageShell>
+  )
+}
+
+export default function PortfolioPage() {
+  return (
+    <Suspense>
+      <PortfolioPageInner />
+    </Suspense>
   )
 }

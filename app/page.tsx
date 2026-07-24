@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { PageShell } from '@/components/page-shell'
 import { ProfileHero } from '@/components/profile-hero'
 import { FeedItem } from '@/components/feed-item'
+import { Suspense } from 'react'
 
 interface FeedItemData {
   id: string
@@ -28,45 +29,43 @@ interface FeedItemData {
   linkedProjectId?: string
 }
 
-export default function HomePage() {
+function HomePageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [items, setItems] = useState<FeedItemData[]>([])
-  const [filteredItems, setFilteredItems] = useState<FeedItemData[]>([])
-  const [activeFilter, setActiveFilter] = useState('all')
   const [loading, setLoading] = useState(true)
 
+  // Read active filter from URL search param ?cat=, fallback to 'all'
+  const activeFilter = searchParams.get('cat') ?? 'all'
+
+  const filteredItems =
+    activeFilter === 'all' ? items : items.filter((item) => item.category === activeFilter)
+
   useEffect(() => {
+    async function fetchFeedItems() {
+      try {
+        const res = await fetch('/api/feed')
+        const data = await res.json()
+        setItems(data.items || [])
+      } catch {
+        // silently fail
+      } finally {
+        setLoading(false)
+      }
+    }
     fetchFeedItems()
   }, [])
 
-  useEffect(() => {
-    if (activeFilter === 'all') {
-      setFilteredItems(items)
-    } else {
-      setFilteredItems(items.filter((item) => item.category === activeFilter))
-    }
-  }, [activeFilter, items])
-
   function handleFilterChange(value: string) {
-    setActiveFilter(value)
-    // Also navigate to the category route so browser URL reflects the filter
+    // Update the URL search param without navigating away — purely visual filtering
+    const params = new URLSearchParams(searchParams.toString())
     if (value === 'all') {
-      router.push('/', { scroll: false })
+      params.delete('cat')
     } else {
-      router.push(`/feed/category/${value}`, { scroll: false })
+      params.set('cat', value)
     }
-  }
-
-  async function fetchFeedItems() {
-    try {
-      const res = await fetch('/api/feed')
-      const data = await res.json()
-      setItems(data.items || [])
-    } catch {
-      // silently fail
-    } finally {
-      setLoading(false)
-    }
+    const newUrl = params.size > 0 ? `/?${params.toString()}` : '/'
+    router.replace(newUrl, { scroll: false })
   }
 
   return (
@@ -113,5 +112,13 @@ export default function HomePage() {
         )}
       </section>
     </PageShell>
+  )
+}
+
+export default function HomePage() {
+  return (
+    <Suspense>
+      <HomePageInner />
+    </Suspense>
   )
 }

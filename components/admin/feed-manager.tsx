@@ -472,6 +472,37 @@ export function FeedManager() {
               </div>
             </div>
 
+            {/* Linked portfolio project */}
+            {portfolioProjects.length > 0 && (
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+                  Link to Portfolio Project
+                  <span className="ml-1 font-normal normal-case text-muted-foreground/70">(optional)</span>
+                </label>
+                <div className="relative">
+                  <select
+                    value={form.linkedProjectId || ''}
+                    onChange={(e) => set('linkedProjectId', e.target.value || '')}
+                    className="w-full appearance-none px-3.5 py-2.5 pr-9 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-colors"
+                  >
+                    <option value="">— No linked project —</option>
+                    {portfolioProjects.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.title} ({p.category})
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    size={14}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  A &ldquo;View related project&rdquo; card will appear on this post and its detail page.
+                </p>
+              </div>
+            )}
+
             {/* Date */}
             <div>
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
