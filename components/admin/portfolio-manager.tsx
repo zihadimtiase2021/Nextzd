@@ -3,9 +3,17 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   Trash2, Edit2, Plus, X, Check, Upload, Image, ExternalLink,
-  Code, Loader2, Star, TrendingUp,
+  Code, Loader2, Star, TrendingUp, AlignLeft, GripVertical,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+interface ContentBlock {
+  id: string
+  type: 'paragraph' | 'heading' | 'image' | 'divider'
+  text?: string
+  url?: string
+  caption?: string
+}
 
 interface Project {
   id: string
@@ -13,6 +21,8 @@ interface Project {
   description: string
   category: string
   image?: string
+  images?: string[]
+  content?: ContentBlock[]
   tech: string[]
   results: Record<string, string>
   link?: string
@@ -25,6 +35,8 @@ const EMPTY: Omit<Project, 'id'> = {
   description: '',
   category: 'development',
   image: '',
+  images: [],
+  content: [],
   tech: [],
   results: { result: '' },
   link: '',
@@ -36,6 +48,10 @@ const CATEGORIES = ['development', 'webflow', 'design', 'marketing']
 
 type Toast = { id: number; msg: string; ok: boolean }
 
+function newBlockId() {
+  return `blk-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+}
+
 export function PortfolioManager() {
   const [projects, setProjects] = useState<Project[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -44,12 +60,14 @@ export function PortfolioManager() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [galleryUploading, setGalleryUploading] = useState(false)
   const [toasts, setToasts] = useState<Toast[]>([])
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [techInput, setTechInput] = useState('')
   const [resultKey, setResultKey] = useState('')
   const [resultVal, setResultVal] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const galleryRef = useRef<HTMLInputElement>(null)
   const formRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { fetchProjects() }, [])
@@ -88,7 +106,7 @@ export function PortfolioManager() {
 
   function openEdit(project: Project) {
     setEditingId(project.id)
-    setForm({ ...project })
+    setForm({ ...project, images: project.images ?? [], content: project.content ?? [] })
     setTechInput(Array.isArray(project.tech) ? project.tech.join(', ') : '')
     const firstEntry = Object.entries(project.results ?? {})[0]
     setResultKey(firstEntry?.[0] ?? '')
@@ -111,7 +129,7 @@ export function PortfolioManager() {
       const data = await res.json()
       if (data.success) {
         set('image', data.url)
-        addToast('Image uploaded')
+        addToast('Cover image uploaded')
       } else {
         addToast('Upload failed', false)
       }
@@ -122,12 +140,57 @@ export function PortfolioManager() {
     }
   }
 
+  async function handleGalleryUpload(files: FileList) {
+    setGalleryUploading(true)
+    const uploaded: string[] = []
+    for (const file of Array.from(files)) {
+      const fd = new FormData()
+      fd.append('file', file)
+      try {
+        const res = await fetch('/api/upload', { method: 'POST', body: fd })
+        const data = await res.json()
+        if (data.success) uploaded.push(data.url)
+        else addToast(`Upload failed: ${file.name}`, false)
+      } catch {
+        addToast(`Upload failed: ${file.name}`, false)
+      }
+    }
+    if (uploaded.length > 0) {
+      setForm((f) => ({ ...f, images: [...(f.images ?? []), ...uploaded] }))
+      addToast(`${uploaded.length} image${uploaded.length > 1 ? 's' : ''} added`)
+    }
+    setGalleryUploading(false)
+  }
+
+  function removeGalleryImage(index: number) {
+    setForm((f) => ({ ...f, images: (f.images ?? []).filter((_, i) => i !== index) }))
+  }
+
+  // Content block helpers
+  function addBlock(type: ContentBlock['type']) {
+    const block: ContentBlock = { id: newBlockId(), type }
+    setForm((f) => ({ ...f, content: [...(f.content ?? []), block] }))
+  }
+
+  function updateBlock(id: string, changes: Partial<ContentBlock>) {
+    setForm((f) => ({
+      ...f,
+      content: (f.content ?? []).map((b) => (b.id === id ? { ...b, ...changes } : b)),
+    }))
+  }
+
+  function removeBlock(id: string) {
+    setForm((f) => ({ ...f, content: (f.content ?? []).filter((b) => b.id !== id) }))
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
     const techArray = techInput.split(',').map((t) => t.trim()).filter(Boolean)
     const results = resultKey.trim() ? { [resultKey.trim()]: resultVal.trim() } : {}
-    const payload = { ...form, tech: techArray, results }
+    // sync cover image: first gallery image if present, otherwise existing cover
+    const coverImage = form.images?.[0] ?? form.image ?? ''
+    const payload = { ...form, tech: techArray, results, image: coverImage }
 
     try {
       const method = editingId ? 'PUT' : 'POST'
@@ -171,6 +234,8 @@ export function PortfolioManager() {
     }
   }
 
+  const galleryCount = (form.images ?? []).length
+
   return (
     <div className="relative">
       {/* Toast stack */}
@@ -208,10 +273,7 @@ export function PortfolioManager() {
 
       {/* Form panel */}
       {showForm && (
-        <div
-          ref={formRef}
-          className="mb-6 rounded-2xl border border-border bg-card overflow-hidden"
-        >
+        <div ref={formRef} className="mb-6 rounded-2xl border border-border bg-card overflow-hidden">
           <div
             className="flex items-center justify-between px-5 py-4 border-b border-border"
             style={{ background: '#f4a29510' }}
@@ -247,7 +309,6 @@ export function PortfolioManager() {
                   <Code size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                 </div>
               </div>
-
               <div className="flex flex-col justify-end pb-0.5">
                 <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                   Featured
@@ -257,9 +318,7 @@ export function PortfolioManager() {
                   onClick={() => set('featured', !form.featured)}
                   className={cn(
                     'flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all',
-                    form.featured
-                      ? 'border-transparent'
-                      : 'border-border text-muted-foreground'
+                    form.featured ? 'border-transparent' : 'border-border text-muted-foreground'
                   )}
                   style={form.featured ? { backgroundColor: '#f4a29520', color: '#f4a295', borderColor: '#f4a29540' } : {}}
                 >
@@ -310,7 +369,6 @@ export function PortfolioManager() {
                 placeholder="React, Webflow, TailwindCSS, Stripe"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand"
               />
-              {/* Live tag preview */}
               {techInput.trim() && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {techInput.split(',').map((t) => t.trim()).filter(Boolean).map((t) => (
@@ -377,56 +435,184 @@ export function PortfolioManager() {
               </div>
             </div>
 
-            {/* Image upload */}
+            {/* ── Image gallery ── */}
             <div>
-              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-                Project Screenshot
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Project Images
+                  <span className="ml-1 font-normal normal-case text-muted-foreground/70">
+                    — first image used as cover
+                  </span>
+                </label>
+                {galleryCount > 0 && (
+                  <span className="text-[11px] text-muted-foreground">{galleryCount} image{galleryCount !== 1 ? 's' : ''}</span>
+                )}
+              </div>
+
+              {/* Gallery grid */}
+              {galleryCount > 0 && (
+                <div className="grid grid-cols-3 gap-2 mb-2">
+                  {(form.images ?? []).map((url, i) => (
+                    <div key={url + i} className="relative group/img rounded-xl overflow-hidden bg-muted border border-border">
+                      <img src={url} alt="" className="w-full h-20 object-cover" />
+                      {i === 0 && (
+                        <div className="absolute top-1 left-1 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-black/70 text-white">
+                          Cover
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeGalleryImage(i)}
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 text-white flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity"
+                        aria-label="Remove image"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div
                 className={cn(
-                  'relative border-2 border-dashed rounded-xl transition-colors cursor-pointer',
-                  uploading ? 'border-brand/40 bg-brand/5' : 'border-border hover:border-brand/40 hover:bg-muted/40'
+                  'border-2 border-dashed rounded-xl transition-colors cursor-pointer',
+                  galleryUploading ? 'border-brand/40 bg-brand/5' : 'border-border hover:border-[#f4a295]/50 hover:bg-muted/30'
                 )}
-                onClick={() => !uploading && !form.image && fileRef.current?.click()}
+                onClick={() => !galleryUploading && galleryRef.current?.click()}
               >
-                {form.image ? (
-                  <div className="relative">
-                    <img src={form.image} alt="Preview" className="w-full max-h-40 rounded-xl object-cover" />
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); set('image', '') }}
-                      className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
-                    >
-                      <X size={13} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); fileRef.current?.click() }}
-                      className="absolute bottom-2 right-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/60 text-white text-xs hover:bg-black/80 transition-colors"
-                    >
-                      <Upload size={12} />
-                      Replace
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-2 py-7 text-muted-foreground">
-                    {uploading ? (
-                      <Loader2 size={24} className="animate-spin" style={{ color: '#f4a295' }} />
-                    ) : (
-                      <>
-                        <Image size={24} />
-                        <span className="text-xs">Click to upload screenshot</span>
-                      </>
-                    )}
-                  </div>
-                )}
+                <div className="flex flex-col items-center gap-2 py-5 text-muted-foreground">
+                  {galleryUploading ? (
+                    <Loader2 size={22} className="animate-spin" style={{ color: '#f4a295' }} />
+                  ) : (
+                    <>
+                      <Image size={20} />
+                      <span className="text-xs">
+                        {galleryCount === 0 ? 'Upload project images' : 'Add more images'}
+                      </span>
+                    </>
+                  )}
+                </div>
                 <input
-                  ref={fileRef}
+                  ref={galleryRef}
                   type="file"
                   accept="image/*"
+                  multiple
                   className="hidden"
-                  onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
+                  onChange={(e) => e.target.files && handleGalleryUpload(e.target.files)}
                 />
+              </div>
+            </div>
+
+            {/* ── Rich content blocks ── */}
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                Detailed Content
+                <span className="ml-1 font-normal normal-case text-muted-foreground/70">
+                  — shown on the project detail page
+                </span>
+              </label>
+
+              {/* Existing blocks */}
+              {(form.content ?? []).length > 0 && (
+                <div className="space-y-2 mb-2">
+                  {(form.content ?? []).map((block) => (
+                    <div key={block.id} className="flex gap-2 items-start group/block">
+                      <div className="mt-2.5 text-muted-foreground/40 hover:text-muted-foreground cursor-grab transition-colors">
+                        <GripVertical size={14} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        {block.type === 'heading' && (
+                          <input
+                            type="text"
+                            value={block.text ?? ''}
+                            onChange={(e) => updateBlock(block.id, { text: e.target.value })}
+                            placeholder="Section heading..."
+                            className="w-full px-3 py-2 rounded-xl border border-border bg-background text-foreground text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand"
+                          />
+                        )}
+                        {block.type === 'paragraph' && (
+                          <textarea
+                            value={block.text ?? ''}
+                            onChange={(e) => updateBlock(block.id, { text: e.target.value })}
+                            placeholder="Write a paragraph..."
+                            rows={3}
+                            className="w-full px-3 py-2 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand resize-none"
+                          />
+                        )}
+                        {block.type === 'image' && (
+                          <div className="space-y-1.5">
+                            <input
+                              type="url"
+                              value={block.url ?? ''}
+                              onChange={(e) => updateBlock(block.id, { url: e.target.value })}
+                              placeholder="Image URL (from gallery above)..."
+                              className="w-full px-3 py-2 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand"
+                            />
+                            <input
+                              type="text"
+                              value={block.caption ?? ''}
+                              onChange={(e) => updateBlock(block.id, { caption: e.target.value })}
+                              placeholder="Caption (optional)..."
+                              className="w-full px-3 py-2 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand"
+                            />
+                            {block.url && (
+                              <div className="rounded-xl overflow-hidden bg-muted border border-border">
+                                <img src={block.url} alt={block.caption ?? ''} className="w-full max-h-32 object-cover" />
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {block.type === 'divider' && (
+                          <div className="flex items-center gap-2 py-2 text-muted-foreground">
+                            <div className="flex-1 h-px bg-border" />
+                            <span className="text-[10px] uppercase tracking-widest">divider</span>
+                            <div className="flex-1 h-px bg-border" />
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeBlock(block.id)}
+                        className="mt-2 w-6 h-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover/block:opacity-100"
+                        aria-label="Remove block"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add block buttons */}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => addBlock('heading')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  <span className="font-bold">H</span> Heading
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addBlock('paragraph')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  <AlignLeft size={12} /> Paragraph
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addBlock('image')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  <Image size={12} /> Image
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addBlock('divider')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  — Divider
+                </button>
               </div>
             </div>
 
@@ -471,6 +657,7 @@ export function PortfolioManager() {
         <div className="space-y-2">
           {projects.map((project) => {
             const isDeleting = deleteConfirm === project.id
+            const coverImage = project.images?.[0] ?? project.image
             return (
               <div
                 key={project.id}
@@ -481,10 +668,9 @@ export function PortfolioManager() {
                     : 'border-border bg-card hover:border-border/80 hover:bg-muted/30'
                 )}
               >
-                {/* Thumbnail or placeholder */}
-                {project.image ? (
+                {coverImage ? (
                   <img
-                    src={project.image}
+                    src={coverImage}
                     alt={project.title}
                     className="w-10 h-10 rounded-lg object-cover shrink-0 border border-border"
                   />
@@ -496,8 +682,6 @@ export function PortfolioManager() {
                     <TrendingUp size={16} style={{ color: '#f4a295' }} />
                   </div>
                 )}
-
-                {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-semibold text-foreground truncate">{project.title}</p>
@@ -508,10 +692,9 @@ export function PortfolioManager() {
                   <p className="text-xs text-muted-foreground capitalize">
                     {project.category}
                     {project.tech?.length > 0 && ` · ${project.tech.slice(0, 2).join(', ')}`}
+                    {(project.images?.length ?? 0) > 0 && ` · ${project.images!.length} image${project.images!.length !== 1 ? 's' : ''}`}
                   </p>
                 </div>
-
-                {/* Actions */}
                 {isDeleting ? (
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-xs text-muted-foreground">Delete?</span>

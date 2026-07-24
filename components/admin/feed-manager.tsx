@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import {
   Trash2, Edit2, Plus, X, Check, Upload, Image, FileVideo,
   BookOpen, Quote, Briefcase, ChevronDown, Loader2, Star,
+  Music, Film, GripVertical,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -15,6 +16,7 @@ interface FeedItem {
   content: string
   category: string
   image?: string
+  media?: string[]
   author: string
   clientName?: string
   clientRole?: string
@@ -41,6 +43,7 @@ const EMPTY: Omit<FeedItem, 'id'> = {
   content: '',
   category: 'articles',
   image: '',
+  media: [],
   author: 'Zihad Imtiase',
   clientName: '',
   clientRole: '',
@@ -67,6 +70,46 @@ const CATEGORY_MAP: Record<string, string> = {
 }
 
 type Toast = { id: number; msg: string; ok: boolean }
+
+function mediaType(url: string): 'image' | 'video' | 'audio' {
+  if (/\.(mp4|webm|mov)$/i.test(url)) return 'video'
+  if (/\.(mp3|ogg|wav|aac|flac|m4a)$/i.test(url)) return 'audio'
+  return 'image'
+}
+
+function MediaThumb({ url, onRemove }: { url: string; onRemove: () => void }) {
+  const kind = mediaType(url)
+  return (
+    <div className="relative rounded-xl overflow-hidden bg-muted border border-border group/thumb">
+      {kind === 'image' && (
+        <img src={url} alt="" className="w-full h-24 object-cover" />
+      )}
+      {kind === 'video' && (
+        <div className="w-full h-24 flex flex-col items-center justify-center gap-1 text-muted-foreground">
+          <Film size={20} />
+          <span className="text-[10px]">Video</span>
+        </div>
+      )}
+      {kind === 'audio' && (
+        <div className="w-full h-24 flex flex-col items-center justify-center gap-1 text-muted-foreground">
+          <Music size={20} />
+          <span className="text-[10px]">Audio</span>
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={onRemove}
+        className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-black/90 transition-colors opacity-0 group-hover/thumb:opacity-100"
+        aria-label="Remove media"
+      >
+        <X size={11} />
+      </button>
+      <div className="absolute bottom-1 left-1.5 text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded bg-black/60 text-white">
+        {kind}
+      </div>
+    </div>
+  )
+}
 
 export function FeedManager() {
   const [items, setItems] = useState<FeedItem[]>([])
@@ -96,9 +139,7 @@ export function FeedManager() {
       const res = await fetch('/api/portfolio')
       const data = await res.json()
       setPortfolioProjects(data.projects || [])
-    } catch {
-      // non-critical, silently fail
-    }
+    } catch { /* non-critical */ }
   }
 
   async function fetchItems() {
@@ -127,7 +168,7 @@ export function FeedManager() {
 
   function openEdit(item: FeedItem) {
     setEditingId(item.id)
-    setForm({ ...item })
+    setForm({ ...item, media: item.media ?? [] })
     setTechInput(Array.isArray(item.tech) ? item.tech.join(', ') : '')
     setShowForm(true)
     setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80)
@@ -138,24 +179,33 @@ export function FeedManager() {
     setEditingId(null)
   }
 
-  async function handleUpload(file: File) {
+  async function handleUploadFiles(files: FileList) {
     setUploading(true)
-    const fd = new FormData()
-    fd.append('file', file)
-    try {
-      const res = await fetch('/api/upload', { method: 'POST', body: fd })
-      const data = await res.json()
-      if (data.success) {
-        set('image', data.url)
-        addToast('Media uploaded')
-      } else {
-        addToast('Upload failed', false)
+    const uploaded: string[] = []
+    for (const file of Array.from(files)) {
+      const fd = new FormData()
+      fd.append('file', file)
+      try {
+        const res = await fetch('/api/upload', { method: 'POST', body: fd })
+        const data = await res.json()
+        if (data.success) uploaded.push(data.url)
+        else addToast(`Upload failed: ${file.name}`, false)
+      } catch {
+        addToast(`Upload failed: ${file.name}`, false)
       }
-    } catch {
-      addToast('Upload failed', false)
-    } finally {
-      setUploading(false)
     }
+    if (uploaded.length > 0) {
+      setForm((f) => ({
+        ...f,
+        media: [...(f.media ?? []), ...uploaded],
+      }))
+      addToast(`${uploaded.length} file${uploaded.length > 1 ? 's' : ''} uploaded`)
+    }
+    setUploading(false)
+  }
+
+  function removeMedia(index: number) {
+    setForm((f) => ({ ...f, media: (f.media ?? []).filter((_, i) => i !== index) }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -165,6 +215,8 @@ export function FeedManager() {
       ...form,
       category: CATEGORY_MAP[form.type] ?? 'articles',
       tech: techInput.split(',').map((t) => t.trim()).filter(Boolean),
+      // keep legacy image field as first media item for backwards compat
+      image: (form.media ?? [])[0] ?? form.image ?? '',
     }
     try {
       const method = editingId ? 'PUT' : 'POST'
@@ -208,7 +260,7 @@ export function FeedManager() {
     }
   }
 
-  const isVideo = (url?: string) => url && (url.includes('.mp4') || url.includes('.webm'))
+  const mediaCount = (form.media ?? []).length
 
   return (
     <div className="relative">
@@ -219,9 +271,7 @@ export function FeedManager() {
             key={t.id}
             className={cn(
               'px-4 py-2.5 rounded-xl text-sm font-medium shadow-lg pointer-events-auto transition-all',
-              t.ok
-                ? 'bg-foreground text-background'
-                : 'bg-destructive text-white'
+              t.ok ? 'bg-foreground text-background' : 'bg-destructive text-white'
             )}
           >
             {t.msg}
@@ -249,11 +299,7 @@ export function FeedManager() {
 
       {/* Inline form panel */}
       {showForm && (
-        <div
-          ref={formRef}
-          className="mb-6 rounded-2xl border border-border bg-card overflow-hidden"
-        >
-          {/* Form header */}
+        <div ref={formRef} className="mb-6 rounded-2xl border border-border bg-card overflow-hidden">
           <div
             className="flex items-center justify-between px-5 py-4 border-b border-border"
             style={{ background: '#f4a29510' }}
@@ -367,7 +413,6 @@ export function FeedManager() {
                     />
                   </div>
                 </div>
-                {/* Star rating */}
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1.5">Rating</label>
                   <div className="flex gap-1">
@@ -417,59 +462,73 @@ export function FeedManager() {
               </div>
             )}
 
-            {/* Media upload */}
+            {/* ── Media upload (multi-file: images, video, audio) ── */}
             <div>
-              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-                Media (image or video)
-              </label>
-              <div
-                className={cn(
-                  'relative border-2 border-dashed rounded-xl transition-colors',
-                  uploading ? 'border-brand/40 bg-brand/5' : 'border-border hover:border-brand/40 hover:bg-muted/40'
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Media
+                  <span className="ml-1 font-normal normal-case text-muted-foreground/70">
+                    — images, video, audio (up to 4 files)
+                  </span>
+                </label>
+                {mediaCount > 0 && (
+                  <span className="text-[11px] text-muted-foreground">{mediaCount}/4</span>
                 )}
-              >
-                {form.image ? (
-                  <div className="relative">
-                    {isVideo(form.image) ? (
-                      <video src={form.image} controls className="w-full max-h-48 rounded-xl object-cover" />
-                    ) : (
-                      <img src={form.image} alt="Preview" className="w-full max-h-48 rounded-xl object-cover" />
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => set('image', '')}
-                      className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
-                    >
-                      <X size={13} />
-                    </button>
-                  </div>
-                ) : (
+              </div>
+
+              {/* Thumbnail grid */}
+              {mediaCount > 0 && (
+                <div className={cn(
+                  'grid gap-2 mb-2',
+                  mediaCount === 1 ? 'grid-cols-1' : 'grid-cols-2'
+                )}>
+                  {(form.media ?? []).map((url, i) => (
+                    <MediaThumb key={url + i} url={url} onRemove={() => removeMedia(i)} />
+                  ))}
+                </div>
+              )}
+
+              {/* Upload button (hidden when 4 files) */}
+              {mediaCount < 4 && (
+                <div
+                  className={cn(
+                    'border-2 border-dashed rounded-xl transition-colors',
+                    uploading ? 'border-brand/40 bg-brand/5' : 'border-border hover:border-[#f4a295]/50 hover:bg-muted/30'
+                  )}
+                >
                   <button
                     type="button"
                     onClick={() => fileRef.current?.click()}
-                    className="w-full flex flex-col items-center gap-2 py-6 text-muted-foreground"
+                    className="w-full flex flex-col items-center gap-2 py-5 text-muted-foreground"
+                    disabled={uploading}
                   >
                     {uploading ? (
-                      <Loader2 size={24} className="animate-spin" style={{ color: '#f4a295' }} />
+                      <Loader2 size={22} className="animate-spin" style={{ color: '#f4a295' }} />
                     ) : (
                       <>
-                        <div className="flex gap-2">
-                          <Image size={20} />
-                          <FileVideo size={20} />
+                        <div className="flex items-center gap-3">
+                          <Image size={18} />
+                          <FileVideo size={18} />
+                          <Music size={18} />
                         </div>
-                        <span className="text-xs">Click to upload image or video</span>
+                        <span className="text-xs">
+                          {mediaCount === 0
+                            ? 'Click to add photos, video or audio'
+                            : 'Add more media'}
+                        </span>
                       </>
                     )}
                   </button>
-                )}
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*,video/mp4,video/webm"
-                  className="hidden"
-                  onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
-                />
-              </div>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    multiple
+                    accept="image/*,video/mp4,video/webm,audio/*"
+                    className="hidden"
+                    onChange={(e) => e.target.files && handleUploadFiles(e.target.files)}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Linked portfolio project */}
@@ -492,10 +551,7 @@ export function FeedManager() {
                       </option>
                     ))}
                   </select>
-                  <ChevronDown
-                    size={14}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
-                  />
+                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-1">
                   A &ldquo;View related project&rdquo; card will appear on this post and its detail page.
@@ -559,6 +615,7 @@ export function FeedManager() {
             const typeMeta = TYPE_OPTIONS.find((t) => t.value === item.type) ?? TYPE_OPTIONS[0]
             const TypeIcon = typeMeta.icon
             const isDeleting = deleteConfirm === item.id
+            const allMedia = item.media?.length ? item.media : item.image ? [item.image] : []
 
             return (
               <div
@@ -570,24 +627,19 @@ export function FeedManager() {
                     : 'border-border bg-card hover:border-border/80 hover:bg-muted/30'
                 )}
               >
-                {/* Type icon */}
                 <div
                   className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                   style={{ backgroundColor: typeMeta.color + '18' }}
                 >
                   <TypeIcon size={14} style={{ color: typeMeta.color }} />
                 </div>
-
-                {/* Info */}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-foreground truncate">{item.title || '(no title)'}</p>
                   <p className="text-xs text-muted-foreground">
                     {typeMeta.label} · {item.date}
-                    {item.image && ' · has media'}
+                    {allMedia.length > 0 && ` · ${allMedia.length} media`}
                   </p>
                 </div>
-
-                {/* Actions */}
                 {isDeleting ? (
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-xs text-muted-foreground">Delete?</span>

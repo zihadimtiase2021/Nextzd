@@ -12,10 +12,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm']
+    const allowedTypes = [
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+      'video/mp4', 'video/webm',
+      'audio/mpeg', 'audio/mp3', 'audio/ogg', 'audio/wav', 'audio/aac', 'audio/flac',
+    ]
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
-        { error: 'Invalid file type. Allowed: images (JPG, PNG, GIF, WebP) and videos (MP4, WebM)' },
+        { error: 'Invalid file type. Allowed: images, videos (MP4, WebM), and audio (MP3, OGG, WAV, AAC, FLAC)' },
         { status: 400 }
       )
     }

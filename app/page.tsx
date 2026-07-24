@@ -15,6 +15,7 @@ interface FeedItemData {
   content: string
   category: string
   image?: string
+  media?: string[]
   author: string
   clientName?: string
   clientRole?: string
@@ -103,6 +104,7 @@ function HomePageInner() {
               replies={item.replies}
               rating={item.rating}
               image={item.image}
+              media={item.media}
               clientImage={item.clientImage}
               projectTech={item.tech}
               projectLink={item.link}

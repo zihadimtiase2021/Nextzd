@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, Heart, MessageCircle, Share2,
-  BookOpen, Quote, Briefcase, ExternalLink, TrendingUp,
+  BookOpen, Quote, Briefcase, ExternalLink, TrendingUp, Music,
 } from 'lucide-react'
 import { PageShell } from '@/components/page-shell'
 
@@ -17,6 +17,7 @@ interface FeedItemData {
   content: string
   category: string
   image?: string
+  media?: string[]
   author: string
   clientName?: string
   clientRole?: string
@@ -159,21 +160,52 @@ export default function FeedDetailPage() {
           </div>
         )}
 
-        {/* Media */}
-        {item.image && (
-          <div className="rounded-2xl overflow-hidden bg-muted mb-5" style={{ aspectRatio: '16/9' }}>
-            {item.image.match(/\.(mp4|webm)$/i) ? (
-              <video src={item.image} controls className="w-full h-full object-cover" />
-            ) : (
-              <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
-            )}
-          </div>
-        )}
-        {item.type === 'testimonial' && item.clientImage && (
-          <div className="rounded-2xl overflow-hidden bg-muted mb-5" style={{ aspectRatio: '16/9' }}>
-            <img src={item.clientImage} alt={item.clientName} className="w-full h-full object-cover" />
-          </div>
-        )}
+        {/* Media — full gallery */}
+        {(() => {
+          const allMedia: string[] = (() => {
+            const arr = item.media && item.media.length > 0 ? item.media : item.image ? [item.image] : []
+            return Array.from(new Set(arr.filter(Boolean)))
+          })()
+          if (allMedia.length === 0) return null
+          return (
+            <div className="mb-5 space-y-2">
+              {allMedia.map((url, i) => {
+                const isVideo = /\.(mp4|webm|mov)$/i.test(url)
+                const isAudio = /\.(mp3|ogg|wav|aac|flac|m4a)$/i.test(url)
+                if (isVideo) {
+                  return (
+                    <div key={i} className="rounded-2xl overflow-hidden bg-black">
+                      <video src={url} controls className="w-full max-h-80 object-contain" />
+                    </div>
+                  )
+                }
+                if (isAudio) {
+                  return (
+                    <div key={i} className="rounded-2xl border border-border bg-muted flex items-center gap-4 p-4">
+                      <div
+                        className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: '#f4a29520' }}
+                      >
+                        <Music size={22} style={{ color: '#f4a295' }} />
+                      </div>
+                      <audio
+                        src={url}
+                        controls
+                        className="flex-1 h-9"
+                        style={{ accentColor: '#f4a295' }}
+                      />
+                    </div>
+                  )
+                }
+                return (
+                  <div key={i} className="rounded-2xl overflow-hidden bg-muted" style={{ aspectRatio: '16/9' }}>
+                    <img src={url} alt={item.title} className="w-full h-full object-cover" />
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })()}
 
         {/* Excerpt */}
         <p className="text-base text-foreground leading-relaxed font-medium mb-4">{item.excerpt}</p>
