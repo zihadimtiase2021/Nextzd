@@ -1,7 +1,15 @@
 import { PageShell } from '@/components/page-shell'
 import { MapPin, Calendar, GraduationCap, Zap, Code2, Globe, Camera } from 'lucide-react'
 
-const PROFILE_IMAGE = '/images/profile.jpg' // Replace with your own image path
+async function getSettings() {
+  try {
+    const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
+    const res = await fetch(`${base}/api/settings`, { cache: 'no-store' })
+    return await res.json()
+  } catch {
+    return { hero: {}, about: { media: [] } }
+  }
+}
 
 const TIMELINE = [
   {
@@ -64,19 +72,14 @@ const VALUES = [
   },
 ]
 
-async function imageExists(src: string): Promise<boolean> {
-  try {
-    const res = await fetch(src, { method: 'HEAD' })
-    return res.ok
-  } catch {
-    return false
-  }
-}
-
 export default async function AboutPage() {
-  const hasProfileImage = await imageExists(
-    `${process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'}${PROFILE_IMAGE}`
-  ).catch(() => false)
+  const siteSettings = await getSettings()
+  const aboutMedia: string[] = Array.isArray(siteSettings?.about?.media)
+    ? siteSettings.about.media
+    : []
+  const primaryMedia = aboutMedia[0] ?? ''
+  const extraMedia = aboutMedia.slice(1)
+  const isVideo = (u: string) => /\.(mp4|webm|mov)$/i.test(u)
 
   return (
     <PageShell>
@@ -86,79 +89,73 @@ export default async function AboutPage() {
         <p className="text-xs text-muted-foreground">Zihad Imtiase</p>
       </div>
 
-      {/* --- Photo / Banner section --- */}
-      <div className="relative">
-        {/* Cover banner */}
-        <div
-          className="h-32 w-full"
-          style={{
-            background:
-              'linear-gradient(135deg, #f4a29522 0%, #e8806f18 60%, #f4a29508 100%)',
-          }}
-        >
-          {/* subtle dot grid */}
-          <div
-            className="absolute inset-0 opacity-[0.06]"
-            style={{
-              backgroundImage: 'radial-gradient(circle, #f4a295 1.5px, transparent 1.5px)',
-              backgroundSize: '24px 24px',
-            }}
-          />
-        </div>
-
-        {/* Profile image — centered, overlapping the banner */}
-        <div className="flex justify-center">
-          <div className="relative -mt-12 z-10">
-            {hasProfileImage ? (
-              <div
-                className="w-24 h-24 rounded-2xl overflow-hidden border-4 border-background shadow-xl"
-                style={{ boxShadow: '0 0 0 1px #f4a29530, 0 8px 32px #0008' }}
-              >
-                <img
-                  src={PROFILE_IMAGE}
-                  alt="Zihad Imtiase"
-                  className="w-full h-full object-cover object-center"
-                />
-              </div>
+      {/* --- Media / Banner section --- */}
+      <div className="border-b border-border">
+        {/* Primary media — full-width hero */}
+        {primaryMedia ? (
+          <div className="w-full overflow-hidden bg-black" style={{ aspectRatio: '16/9', maxHeight: 280 }}>
+            {isVideo(primaryMedia) ? (
+              <video
+                src={primaryMedia}
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="w-full h-full object-cover"
+              />
             ) : (
-              /* Placeholder — shows when no image is uploaded yet */
-              <div
-                className="w-24 h-24 rounded-2xl border-4 border-background flex flex-col items-center justify-center gap-1 shadow-xl"
-                style={{
-                  backgroundColor: '#f4a29518',
-                  border: '2px dashed #f4a29560',
-                  boxShadow: '0 8px 32px #0008',
-                }}
-                title="Upload your photo to /public/images/profile.jpg"
-              >
-                <Camera size={22} style={{ color: '#f4a295' }} />
-                <span className="text-[9px] font-medium text-center leading-tight px-1" style={{ color: '#f4a295' }}>
-                  Add photo
-                </span>
-              </div>
+              <img
+                src={primaryMedia}
+                alt="About section media"
+                className="w-full h-full object-cover"
+              />
             )}
-            {/* Online indicator */}
-            <span
-              className="absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-background"
-            />
           </div>
-        </div>
+        ) : (
+          /* Placeholder when no media is uploaded */
+          <div
+            className="h-32 w-full relative overflow-hidden flex flex-col items-center justify-center gap-2"
+            style={{ background: 'linear-gradient(135deg, #f4a29518 0%, #e8806f12 60%, #f4a29506 100%)' }}
+          >
+            <div
+              className="absolute inset-0 opacity-[0.06]"
+              style={{
+                backgroundImage: 'radial-gradient(circle, #f4a295 1.5px, transparent 1.5px)',
+                backgroundSize: '24px 24px',
+              }}
+            />
+            <Camera size={22} className="relative z-10" style={{ color: '#f4a29560' }} />
+            <p className="relative z-10 text-[11px] text-muted-foreground/50">
+              Upload about media in Data Management → Site Settings
+            </p>
+          </div>
+        )}
 
-        {/* Name + title below avatar */}
-        <div className="text-center px-5 pt-3 pb-5 border-b border-border">
+        {/* Extra media — horizontal scroll strip */}
+        {extraMedia.length > 0 && (
+          <div className="flex gap-2 px-4 py-3 overflow-x-auto scrollbar-none">
+            {extraMedia.map((url, i) => (
+              <div
+                key={url + i}
+                className="shrink-0 rounded-xl overflow-hidden border border-border bg-muted"
+                style={{ width: 80, height: 60 }}
+              >
+                {isVideo(url) ? (
+                  <video src={url} muted autoPlay loop playsInline className="w-full h-full object-cover" />
+                ) : (
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Name + title */}
+        <div className="px-5 pt-4 pb-5">
           <h2 className="font-bold text-xl text-foreground">Zihad Imtiase</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
             Frontend Developer &amp; Webflow Specialist
           </p>
-          {/* Upload hint — only shown when no image */}
-          {!hasProfileImage && (
-            <p className="mt-2 text-[11px] text-muted-foreground/60 leading-relaxed">
-              Upload your photo to{' '}
-              <code className="font-mono text-[10px] px-1 py-0.5 rounded bg-muted">
-                /public/images/profile.jpg
-              </code>
-            </p>
-          )}
         </div>
       </div>
 

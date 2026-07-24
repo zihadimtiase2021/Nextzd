@@ -35,6 +35,8 @@ function HomePageInner() {
   const searchParams = useSearchParams()
   const [items, setItems] = useState<FeedItemData[]>([])
   const [loading, setLoading] = useState(true)
+  const [coverMedia, setCoverMedia] = useState('')
+  const [profileMedia, setProfileMedia] = useState('')
 
   // Read active filter from URL search param ?cat=, fallback to 'all'
   const activeFilter = searchParams.get('cat') ?? 'all'
@@ -54,7 +56,16 @@ function HomePageInner() {
         setLoading(false)
       }
     }
+    async function fetchSettings() {
+      try {
+        const res = await fetch('/api/settings')
+        const data = await res.json()
+        setCoverMedia(data?.hero?.coverMedia ?? '')
+        setProfileMedia(data?.hero?.profileMedia ?? '')
+      } catch { /* non-critical */ }
+    }
     fetchFeedItems()
+    fetchSettings()
   }, [])
 
   function handleFilterChange(value: string) {
@@ -72,7 +83,12 @@ function HomePageInner() {
   return (
     <PageShell>
       {/* Profile hero contains the single filter tab bar */}
-      <ProfileHero activeFilter={activeFilter} onFilterChange={handleFilterChange} />
+      <ProfileHero
+        activeFilter={activeFilter}
+        onFilterChange={handleFilterChange}
+        coverMedia={coverMedia}
+        profileMedia={profileMedia}
+      />
 
       {/* Feed */}
       <section aria-label="Feed">
