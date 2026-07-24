@@ -3,13 +3,9 @@ import fs from 'fs'
 import path from 'path'
 import { isAuthenticated } from '@/lib/auth'
 
-// Allow up to 50 MB request bodies
-export const config = {
-  api: {
-    bodyParser: false,
-    responseLimit: false,
-  },
-}
+// App Router route handlers stream the body, so no bodyParser config is needed.
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   if (!(await isAuthenticated(request))) {
