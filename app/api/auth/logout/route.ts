@@ -6,5 +6,6 @@ const SESSION_COOKIE = 'admin_session'
 export async function POST() {
   const cookieStore = await cookies()
   cookieStore.delete(SESSION_COOKIE)
+  cookieStore.delete('admin_hint')
   return NextResponse.json({ success: true })
 }
