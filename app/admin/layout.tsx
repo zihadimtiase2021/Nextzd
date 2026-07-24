@@ -53,7 +53,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="flex min-h-screen max-w-[1280px] mx-auto">
+    <div className="flex min-h-screen max-w-[990px] mx-auto w-full">
       <NavSidebar />
 
       <main className="flex-1 min-w-0 flex flex-col">

@@ -5,7 +5,7 @@ import { MobileTopbar } from '@/components/mobile-topbar'
 
 export function PageShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen max-w-[1280px] mx-auto">
+    <div className="flex min-h-screen max-w-[990px] mx-auto w-full">
       <NavSidebar />
 
       {/* Main column */}
