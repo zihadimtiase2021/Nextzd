@@ -13,38 +13,85 @@ const TABS = [
 interface ProfileHeroProps {
   activeFilter?: string
   onFilterChange?: (value: string) => void
+  coverMedia?: string
+  profileMedia?: string
 }
 
-export function ProfileHero({ activeFilter = 'all', onFilterChange }: ProfileHeroProps) {
+function isVideo(url: string) { return /\.(mp4|webm|mov)$/i.test(url) }
+
+export function ProfileHero({
+  activeFilter = 'all',
+  onFilterChange,
+  coverMedia = '',
+  profileMedia = '',
+}: ProfileHeroProps) {
   return (
     <div className="border-b border-border">
       {/* Banner */}
-      <div
-        className="h-28 md:h-36 w-full relative overflow-hidden"
-        style={{
-          background: 'linear-gradient(135deg, #f4a29520 0%, #e8806f18 50%, #f4a29508 100%)',
-        }}
-      >
-        <div
-          className="absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage:
-              'radial-gradient(circle, #f4a295 1.5px, transparent 1.5px)',
-            backgroundSize: '28px 28px',
-          }}
-        />
+      <div className="h-28 md:h-36 w-full relative overflow-hidden">
+        {coverMedia ? (
+          isVideo(coverMedia) ? (
+            <video
+              src={coverMedia}
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          ) : (
+            <img
+              src={coverMedia}
+              alt="Cover"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          )
+        ) : (
+          <>
+            <div
+              className="absolute inset-0"
+              style={{ background: 'linear-gradient(135deg, #f4a29520 0%, #e8806f18 50%, #f4a29508 100%)' }}
+            />
+            <div
+              className="absolute inset-0 opacity-[0.07]"
+              style={{
+                backgroundImage: 'radial-gradient(circle, #f4a295 1.5px, transparent 1.5px)',
+                backgroundSize: '28px 28px',
+              }}
+            />
+          </>
+        )}
       </div>
 
       <div className="px-4 pb-4">
         {/* Avatar row */}
         <div className="flex items-end justify-between -mt-9 mb-3">
           <div className="relative">
-            <div
-              className="w-16 h-16 md:w-[72px] md:h-[72px] rounded-full border-4 border-background flex items-center justify-center font-bold text-xl shadow-sm"
-              style={{ backgroundColor: '#f4a295', color: '#1a1a1a' }}
-            >
-              ZI
-            </div>
+            {profileMedia ? (
+              isVideo(profileMedia) ? (
+                <video
+                  src={profileMedia}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  className="w-16 h-16 md:w-[72px] md:h-[72px] rounded-full border-4 border-background object-cover shadow-sm"
+                />
+              ) : (
+                <img
+                  src={profileMedia}
+                  alt="Zihad Imtiase"
+                  className="w-16 h-16 md:w-[72px] md:h-[72px] rounded-full border-4 border-background object-cover shadow-sm"
+                />
+              )
+            ) : (
+              <div
+                className="w-16 h-16 md:w-[72px] md:h-[72px] rounded-full border-4 border-background flex items-center justify-center font-bold text-xl shadow-sm"
+                style={{ backgroundColor: '#f4a295', color: '#1a1a1a' }}
+              >
+                ZI
+              </div>
+            )}
             <span className="absolute bottom-1 right-1 w-3 h-3 rounded-full bg-green-500 border-2 border-background" />
           </div>
 
