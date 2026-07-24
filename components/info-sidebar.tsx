@@ -39,13 +39,13 @@ export function InfoSidebar() {
             Active since March 2022
           </span>
           <Link
-            href="https://linkedin.com"
+            href="https://www.linkedin.com/in/zihadimtiase"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 hover:text-foreground transition-colors"
           >
             <ExternalLink size={13} style={{ color: '#f4a295' }} />
-            /linkedin
+            /in/zihadimtiase
           </Link>
         </div>
       </div>

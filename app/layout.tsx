@@ -10,8 +10,14 @@ const jetbrainsMono = JetBrains_Mono({
   variable: '--font-jetbrains',
 })
 
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://zihadimtiase.com'
+
 export const metadata: Metadata = {
-  title: 'Zihad Imtiase — Frontend & Webflow Developer',
+  metadataBase: new URL(BASE_URL),
+  title: {
+    default: 'Zihad Imtiase — Frontend & Webflow Developer',
+    template: '%s | Zihad Imtiase',
+  },
   description:
     'Frontend Web Developer and Webflow specialist crafting high-converting websites. Based in Dhaka, Bangladesh.',
   keywords: [
@@ -22,6 +28,26 @@ export const metadata: Metadata = {
     'web design',
     'Bangladesh',
   ],
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: BASE_URL,
+    siteName: 'Zihad Imtiase',
+    title: 'Zihad Imtiase — Frontend & Webflow Developer',
+    description:
+      'Frontend Web Developer and Webflow specialist crafting high-converting websites.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Zihad Imtiase — Frontend & Webflow Developer',
+    description:
+      'Frontend Web Developer and Webflow specialist crafting high-converting websites.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
 }
 
 export const viewport: Viewport = {
@@ -35,7 +61,15 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Synchronous theme script — runs before paint to avoid flash */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('zd-theme');document.documentElement.classList.toggle('dark',t?t==='dark':true)}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} antialiased bg-background text-foreground`}
       >

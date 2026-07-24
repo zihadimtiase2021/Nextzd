@@ -11,7 +11,9 @@ async function sha256(text: string): Promise<string> {
 }
 
 async function makeSessionToken(username: string, password: string): Promise<string> {
-  return sha256(`${username}:${password}:${password}:nextzd-session`)
+  // Must match the formula in lib/auth.ts and app/api/auth/login/route.ts
+  const secret = password
+  return sha256(`${username}:${password}:${secret}:nextzd-session`)
 }
 
 export async function middleware(request: NextRequest) {

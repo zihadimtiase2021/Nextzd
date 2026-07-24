@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
+import { isAuthenticated } from '@/lib/auth'
 
 // Allow up to 50 MB request bodies
 export const config = {
@@ -11,6 +12,9 @@ export const config = {
 }
 
 export async function POST(request: NextRequest) {
+  if (!(await isAuthenticated(request))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File | null
